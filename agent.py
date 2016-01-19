@@ -10,7 +10,7 @@
     (C) Datadog, Inc. 2010-2014 all rights reserved
 '''
 # set up logging before importing any other components
-from config import get_version, initialize_logging # noqa
+from config import get_version, initialize_logging  # noqa
 initialize_logging('collector')
 
 # stdlib
@@ -181,8 +181,14 @@ class Agent(Daemon):
             self.collector.run(checksd=self._checksd,
                                start_event=self.start_event,
                                configs_reloaded=self.configs_reloaded)
-            if self.configs_reloaded:
-                self.configs_reloaded = False
+
+            self.configs_reloaded = False
+            # Check if we should run service discovery (this flag is set in the docker_daemon check).
+            if self._agentConfig.get('reload_check_configs'):
+                self.reload_configs()
+                self.configs_reloaded = True
+                self._agentConfig['reload_check_configs'] = False
+
             if profiled:
                 if collector_profiled_runs >= self.collector_profile_interval:
                     try:
