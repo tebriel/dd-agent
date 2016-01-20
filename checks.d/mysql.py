@@ -97,8 +97,8 @@ class MySql(AgentCheck):
 
     def _connect(self, host, port, mysql_sock, user, password, defaults_file):
         service_check_tags = [
-            'host:%s' % host,
-            'port:%s' % port
+            'host:%s' % mysql_sock if mysql_sock != '' else host,
+            'port:%s' % 'unix_socket' if port == 0 else port
         ]
 
         try:
@@ -110,10 +110,6 @@ class MySql(AgentCheck):
                     user=user,
                     passwd=password
                 )
-                service_check_tags = [
-                    'host:%s' % mysql_sock,
-                    'port:unix_socket'
-                ]
             elif port:
                 db = pymysql.connect(
                     host=host,
