@@ -55,8 +55,9 @@ class ServiceDiscoveryBackend(object):
         config[1] = config[1]
         return config
 
-    def _drop(self):
-        ServiceDiscoveryBackend._instance = None
+    @classmethod
+    def _drop(cls):
+        cls._instance = None
 
 
 class SDDockerBackend(ServiceDiscoveryBackend):
@@ -64,7 +65,16 @@ class SDDockerBackend(ServiceDiscoveryBackend):
 
     def __init__(self, agentConfig):
         self.docker_client = get_docker_client()
-        self.config_store = ConfigStore(agentConfig=agentConfig)
+
+        try:
+            self.config_store = ConfigStore(agentConfig=agentConfig)
+        except Exception as e:
+            log.error('Failed to instantiate the config store client. '
+                      'Auto-config only will be used. %s' % str(e))
+            agentConfig['sd_config_backend'] = None
+            ConfigStore._drop()
+            self.config_store = ConfigStore(agentConfig=agentConfig)
+
         self.VAR_MAPPING = {
             'host': self._get_host,
             'port': self._get_port,

@@ -65,9 +65,10 @@ class ConfigStore(object):
         self.client = self.get_client()
         self.sd_template_dir = agentConfig.get('sd_template_dir')
 
-    def _drop(self):
+    @classmethod
+    def _drop(cls):
         """Drop the config store instance"""
-        ConfigStore._instance = None
+        cls._instance = None
 
     def _extract_settings(self, config):
         raise NotImplementedError()
@@ -88,9 +89,12 @@ class ConfigStore(object):
                              " Leaving it unconfigured." % image_name)
                     return None
                 auto_conf = get_auto_conf(self.agentConfig, check_name)
+                init_config, instances = auto_conf.get('init_config'), auto_conf.get('instances')
+
                 # stringify the dict to be consistent with what comes from the config stores
-                init_config_tpl = json.dumps(auto_conf.get('init_config'))
-                instance_tpl = json.dumps(auto_conf.get('instances')[0])
+                init_config_tpl = json.dumps(init_config) if init_config else '{}'
+                instance_tpl = json.dumps(instances[0]) if instances and len(instances) > 0 else '{}'
+
                 return [check_name, init_config_tpl, instance_tpl]
         return None
 

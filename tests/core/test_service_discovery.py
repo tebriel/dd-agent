@@ -10,8 +10,8 @@ from utils.service_discovery.sd_backend import ServiceDiscoveryBackend, SDDocker
 
 
 def clear_singletons(sd_backend):
-    sd_backend.config_store._drop()
-    sd_backend._drop()
+    ConfigStore._drop()
+    ServiceDiscoveryBackend._drop()
 
 
 class Response(object):
@@ -195,7 +195,7 @@ class TestServiceDiscovery(unittest.TestCase):
         expected_tpl = {
             'redis': ['redisdb', '{}', '{"host": "%%host%%", "port": "%%port%%"}'],
             'nginx': ['nginx', '{}', '{"nginx_status_url": "http://%%host%%/nginx_status/"}'],
-            'consul': ['consul', '{}', '{"url": "http://%%host%%:%%port%%", "catalog_checks": "yes", "service_whitelist": [], "new_leader_checks": "yes"}'],
+            'consul': ['consul', '{}', '{"url": "http://%%host%%:%%port%%", "catalog_checks": true, "service_whitelist": null, "new_leader_checks": true}'],
             'foobar': None
         }
         config_store = ConfigStore(self.auto_conf_agentConfig)

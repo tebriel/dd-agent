@@ -5,4 +5,3 @@ instances:
     catalog_checks: yes
     new_leader_checks: yes
     service_whitelist:
-      -
