@@ -125,7 +125,7 @@ class SDDockerBackend(ServiceDiscoveryBackend):
 
     def get_configs(self):
         """Get the config for all docker containers running on the host."""
-        containers = [(container.get('Image').split(':')[0], container.get('Id'), container.get('Labels')) for container in self.docker_client.containers()]
+        containers = [(container.get('Image').split(':')[0].split('/')[-1], container.get('Id'), container.get('Labels')) for container in self.docker_client.containers()]
         configs = {}
 
         for image, cid, labels in containers:
@@ -178,7 +178,7 @@ class SDDockerBackend(ServiceDiscoveryBackend):
         if tpl is not None and len(tpl) == 3:
             check_name, init_config_tpl, instance_tpl = tpl
         else:
-            log.debug('No template was found for image %s, leaving it alone.')
+            log.debug('No template was found for image %s, leaving it alone.' % image_name)
             return None
         try:
             # build a list of all variables to replace in the template
