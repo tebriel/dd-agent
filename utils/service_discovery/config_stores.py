@@ -46,6 +46,7 @@ class KeyNotFound(Exception):
 class ConfigStore(object):
     """Singleton for config stores"""
     _instance = None
+    previous_config_index = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -132,6 +133,20 @@ class ConfigStore(object):
         template = [check_name, init_config_tpl, instance_tpl]
         return template
 
+    def crawl_config_template(self):
+        """Return whether or not configuration templates have changed since the previous crawl"""
+        config_index = self.client_read(self.sd_template_dir.lstrip('/'), recursive=True, watch=True)
+        # Initialize the config index reference
+        if self.previous_config_index is None:
+            self.previous_config_index = config_index
+            return False
+        # Config has been modified since last crawl
+        if config_index != self.previous_config_index:
+            log.info('Detected an update in config template, reloading check configs...')
+            self.previous_config_index = config_index
+            return True
+        return False
+
     @staticmethod
     def extract_sd_config(config):
         """Extract configuration about service discovery for the agent"""
@@ -162,6 +177,10 @@ class StubStore(ConfigStore):
     def get_client(self):
         pass
 
+    def crawl_config_template(self):
+        # There is no user provided templates in auto_config mode
+        return False
+
 
 class EtcdStore(ConfigStore):
     """Implementation of a config store client for etcd"""
@@ -189,7 +208,14 @@ class EtcdStore(ConfigStore):
     def client_read(self, path, **kwargs):
         """Retrieve a value from a etcd key."""
         try:
-            return self.client.read(path, timeout=kwargs.get('timeout', DEFAULT_TIMEOUT)).value
+            res = self.client.read(
+                path,
+                timeout=kwargs.get('timeout', DEFAULT_TIMEOUT),
+                recursive=kwargs.get('recursive', False))
+            if kwargs.get('watch', False) is True:
+                return res.etcd_index
+            else:
+                return res.value
         except EtcdKeyNotFound:
             raise KeyNotFound("The key %s was not found in etcd" % path)
         except TimeoutError, e:
@@ -226,8 +252,11 @@ class ConsulStore(ConfigStore):
 
     def client_read(self, path, **kwargs):
         """Retrieve a value from a consul key."""
-        res = self.client.kv.get(path)[1]
-        if res is not None:
-            return res.get('Value')
+        res = self.client.kv.get(path)
+        if kwargs.get('watch', False) is True:
+            return res[0]
         else:
-            raise KeyNotFound("The key %s was not found in consul" % path)
+            if res[1] is not None:
+                return res[1].get('Value', recurse=kwargs.get('recursive', False))
+            else:
+                raise KeyNotFound("The key %s was not found in consul" % path)

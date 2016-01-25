@@ -49,8 +49,8 @@ class ServiceDiscoveryBackend(object):
                     if var.strip('%') in variables and variables[var.strip('%')]:
                         tpl[key] = tpl[key].replace(var, variables[var.strip('%')])
                     else:
-                        log.warning('Failed to find a value for the {0} parameter.'
-                                    ' The check might not be configured properly.'.format(key))
+                        log.warning('Failed to find interpolate variable {0} for the {1} parameter.'
+                                    ' The check might not be configured properly.'.format(var, key))
                         tpl[key].replace(var, '')
         config[1] = config[1]
         return config
@@ -85,8 +85,8 @@ class SDDockerBackend(ServiceDiscoveryBackend):
         """Extract the host IP from a docker inspect object, or the kubelet API."""
         ip_addr = container_inspect.get('NetworkSettings', {}).get('IPAddress')
         if not ip_addr:
-            log.debug("Didn't find the IP address for container %s, "
-                      "using the kubernetes way." % container_inspect.get('Id', ''))
+            log.debug("Didn't find the IP address for container %s (%s), using the kubernetes way." %
+                      (container_inspect.get('Id', ''), container_inspect.get('Config', {}).get('Image', '')))
             # kubernetes case
             host_ip = _get_default_router()
 
@@ -116,8 +116,8 @@ class SDDockerBackend(ServiceDiscoveryBackend):
         try:
             port = container_inspect['NetworkSettings']['Ports'].keys()[0].split("/")[0]
         except (IndexError, KeyError, AttributeError):
-            log.debug("Didn't find the port for container %s, "
-                      "using the kubernetes way." % container_inspect.get('Id', ''))
+            log.debug("Didn't find the port for container %s (%s), using the kubernetes way." %
+                      (container_inspect.get('Id', ''), container_inspect.get('Config', {}).get('Image', '')))
             # kubernetes case
             ports = container_inspect['Config'].get('ExposedPorts', {})
             port = ports.keys()[0].split("/")[0] if ports else None
